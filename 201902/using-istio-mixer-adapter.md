@@ -11,7 +11,7 @@ date: 2019-2-15
 
 ## 介绍
 
-互联网服务离不开用户认证。JSON Web Token(后简称JWT)是一个轻巧，分布式的用户授权鉴权规范。和过去的session数据持久化的方案相比，JWT有着分布式鉴权的特点，避免了session用户认证时单点失败引起所有服务都无法正常使用的窘境，从而在微服务架构设计下越来越受欢迎。然而JWT单点授权，分布鉴权的特点也给我们带来了一个问题，即服务端无法主动回收或者BAN出相应的Token，使得即使某个服务主动封禁了一个用户时，这个用户同样可以使用之前的JWT来从其他服务获取资源。本文我们将阐述利用Istio Mixer Adapter的能力，来将所有请求在服务网格的入口边缘层进行JWT检查的例子,从而实现用户封禁与主动逐出JWT等功能。
+互联网服务离不开用户认证。JSON Web Token(后简称JWT)是一个轻巧，分布式的用户授权鉴权规范。和过去的session数据持久化的方案相比，JWT有着分布式鉴权的特点，避免了session用户认证时单点失败引起所有服务都无法正常使用的窘境，从而在微服务架构设计下越来越受欢迎。然而JWT单点授权，分布鉴权的特点也给我们带来了一个问题，即服务端无法主动回收或者BAN出相应的Token，使得即使某个服务主动封禁了一个用户时，这个用户同样可以使用之前的JWT来从其他服务获取资源。本文我们将阐述利用Istio Mixer Adapter的能力，来将所有请求在服务网格的入口边缘层进行JWT检查的例子，从而实现用户封禁与主动逐出JWT等功能。
 
 ## 背景
 
@@ -37,7 +37,7 @@ Istio Mixer 提供了一个适配器模型，它允许我们通过为Mixer创建
 那么怎么通俗易懂的理解Handler-Instances-Rule这三者的关系呢？在我的理解下，当每个请求在服务网格的数据层中游走时，都会在开始与结束时带上各种元信息向Mixer组件通信。而Mixer组件则会根据Rule来将**特定的请求**中的**特定的数据**交给**特定的处理器**去检查或者是记录。那么对于**特定的请求**，则是通过Rule去决定；对于**特定的数据**，则是通过Instances去决定；对于**特定的处理器**，则是通过Handler去决定。最终Rule还把自己与Instances和Handler绑定在一起，从而让Mixer理解了将哪些请求用哪些数据做哪些处理。
 在这里我们可以通过[Istio Policies Task](https://istio.io/docs/tasks/policy-enforcement/)中的[黑白名单机制](https://istio.io/docs/tasks/policy-enforcement/denial-and-list/)来理解一下这个模型。
 
-在这里**appversion.listentry**作为instances，通过将**list entry**作为模版，获取了每个请求中的source.labels["version"]的值，即**特定的数据**。**whitelist.listchecker**作为handler，则是告诉了背后的处理器作为白名单模式只通过数据是v1与v2的请求，即**特定的处理器**。最后**checkversion.rule**作为rule，将**appversion.listentry**和**whitelist.listchecker**两者绑定在一起，并通过match字段指明哪些请求会经过这些处理流程，即**特定的请求**。
+在这里**appversion.listentry**作为Instances，通过将**list entry**作为模版，获取了每个请求中的source.labels["version"]的值，即**特定的数据**。**whitelist.listchecker**作为handler，则是告诉了背后的处理器作为白名单模式只通过数据是v1与v2的请求，即**特定的处理器**。最后**checkversion.rule**作为rule，将**appversion.listentry**和**whitelist.listchecker**两者绑定在一起，并通过match字段指明哪些请求会经过这些处理流程，即**特定的请求**。
 
 ```yaml
 ## instances
